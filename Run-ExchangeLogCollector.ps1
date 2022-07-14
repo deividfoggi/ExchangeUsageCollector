@@ -32,6 +32,21 @@ switch ($Log) {
             Write-Host $_.Exception.Message -ForegroundColor Red
         }
     }
+    "POP" {
+        $popServersSettings = $exchangeServer | %{Get-PopSettings -Server $_.Name}
+        foreach($popServerSettings in $popServersSettings) {
+            $popLogNetworkPath = "\\$($popServerSetting.Server)\" + $popServerSettings.LogFileLocation.Replace(":","$")
+            try{
+                $sourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop
+                New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
+                New-Item -ItemType Directory -Name "$($popServerSettings.Server)" -Path .\POP -ErrorAction Stop
+                Copy-Item $sourceFiles -Destination .\POP\$($popServerSettings.Server)
+            }catch{
+                Write-Host $_.Exception.GetType() -ForegroundColor Yellow
+            }
+            
+        }
+    }
     Default {
         Write-Host "Use parameter 'Log' to choose which log to collect: Tracking, " -ForegroundColor Yellow
     }
