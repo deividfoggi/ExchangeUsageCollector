@@ -35,8 +35,9 @@ switch ($Log) {
     "POP" {
         $popServersSettings = $exchangeServer | %{Get-PopSettings -Server $_.Name}
         foreach($popServerSettings in $popServersSettings) {
-            $popLogNetworkPath = "\\$($popServerSetting.Server)\" + $popServerSettings.LogFileLocation.Replace(":","$")
+            $popLogNetworkPath = "\\$($popServerSettings.Server)\" + $popServerSettings.LogFileLocation.Replace(":","$")
             try{
+                Set-PopSettings -Server $popServerSettings.Server -ProtocolLogEnabled $true -ErrorAction Stop
                 $sourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop
                 New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
                 New-Item -ItemType Directory -Name "$($popServerSettings.Server)" -Path .\POP -ErrorAction Stop
