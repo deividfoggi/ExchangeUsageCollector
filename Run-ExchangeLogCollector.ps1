@@ -41,7 +41,7 @@ switch ($Log) {
                     Set-PopSettings -Server $popServerSettings.Server -ProtocolLogEnabled $true -ErrorAction Stop
                     Invoke-Command -ComputerName $popServerSettings.Server -ScriptBlock {Restart-Service MSExchangePop3;Restart-Service MSexchangePop3BE} -ErrorAction Stop
                 }
-                $popSourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop
+                $popSourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
                 if(!(Test-Path -Path .\POP)){
                     New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
                 }
