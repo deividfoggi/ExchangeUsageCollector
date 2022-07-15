@@ -33,28 +33,33 @@ switch ($Log) {
         }
     }
     "POP" {
-        $popServersSettings = $exchangeServers | %{Get-PopSettings -Server $_.Name}
-        foreach($popServerSettings in $popServersSettings) {
-            $popLogNetworkPath = "\\$($popServerSettings.Server)\" + $popServerSettings.LogFileLocation.Replace(":","$")
-            try{
-                if((Get-PopSettings -Server $popServerSettings.Server -ErrorAction Stop).ProtocolLogEnabled -eq $false){
-                    Set-PopSettings -Server $popServerSettings.Server -ProtocolLogEnabled $true -ErrorAction Stop
-                    Invoke-Command -ComputerName $popServerSettings.Server -ScriptBlock {Restart-Service MSExchangePop3;Restart-Service MSexchangePop3BE} -ErrorAction Stop
+        try{
+            $popServersSettings = $exchangeServers | %{Get-PopSettings -Server $_.Name}
+            foreach($popServerSettings in $popServersSettings) {
+                $popLogNetworkPath = "\\$($popServerSettings.Server)\" + $popServerSettings.LogFileLocation.Replace(":","$")
+                try{
+                    if((Get-PopSettings -Server $popServerSettings.Server -ErrorAction Stop).ProtocolLogEnabled -eq $false){
+                        Set-PopSettings -Server $popServerSettings.Server -ProtocolLogEnabled $true -ErrorAction Stop
+                        Invoke-Command -ComputerName $popServerSettings.Server -ScriptBlock {Restart-Service MSExchangePop3;Restart-Service MSexchangePop3BE} -ErrorAction Stop
+                    }
+                    $popSourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
+                    if(!(Test-Path -Path .\POP)){
+                        New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
+                    }
+                    if(!(Test-Path -Path .\POP\$($popServerSettings.Server))){
+                        New-Item -ItemType Directory -Name "$($popServerSettings.Server)" -Path .\POP -ErrorAction Stop
+                    }
+                    foreach($file in $popSourceFiles){
+                        Copy-Item $file.FullName -Destination .\POP\$($popServerSettings.Server) -ErrorAction Stop
+                    }                
+                }catch{
+                    Write-Host $_.Exception.GetType() -ForegroundColor Yellow
                 }
-                $popSourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
-                if(!(Test-Path -Path .\POP)){
-                    New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
-                }
-                if(!(Test-Path -Path .\POP\$($popServerSettings.Server))){
-                    New-Item -ItemType Directory -Name "$($popServerSettings.Server)" -Path .\POP -ErrorAction Stop
-                }
-                foreach($file in $popSourceFiles){
-                    Copy-Item $file.FullName -Destination .\POP\$($popServerSettings.Server) -ErrorAction Stop
-                }                
-            }catch{
-                Write-Host $_.Exception.GetType() -ForegroundColor Yellow
             }
+        }catch{
+            Write-Host $_.Exception.GetType() -ForegroundColor Yellow
         }
+        
     }
     "Http" {
         foreach($server in $exchangeServers) {
