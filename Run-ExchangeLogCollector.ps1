@@ -62,27 +62,32 @@ switch ($Log) {
         
     }
     "Http" {
-        foreach($server in $exchangeServers) {
-            $iisLogPath = Invoke-Command -ComputerName $server.Name -ScriptBlock{
-                Import-Module WebAdministration
-                (Get-Item 'IIS:\Sites\Default Web Site').logFile.Directory
-            } -ErrorAction Stop
-            if($iisLogPath.Split("\")[0] -match ":") {
-                $iisNetworkLogPath = "\\$($server.Name)\" + $iisLogPath.Replace(":","$") + "\W3SVC1"
-            } elseif($iisLogPath.Split("\")[0] -match "%SystemDrive%") {
-                $iisNetworkLogPath = "\\$($server.Name)\" + $iisLogPath.Replace("%SystemDrive%","C$") + "\W3SVC1"
+        try{
+            foreach($server in $exchangeServers) {
+                $iisLogPath = Invoke-Command -ComputerName $server.Name -ScriptBlock{
+                    Import-Module WebAdministration
+                    (Get-Item 'IIS:\Sites\Default Web Site').logFile.Directory
+                } -ErrorAction Stop
+                if($iisLogPath.Split("\")[0] -match ":") {
+                    $iisNetworkLogPath = "\\$($server.Name)\" + $iisLogPath.Replace(":","$") + "\W3SVC1"
+                } elseif($iisLogPath.Split("\")[0] -match "%SystemDrive%") {
+                    $iisNetworkLogPath = "\\$($server.Name)\" + $iisLogPath.Replace("%SystemDrive%","C$") + "\W3SVC1"
+                }
+                $httpSourceFiles = Get-ChildItem -Path $iisNetworkLogPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
+                if(!(Test-Path -Path .\HTTP)){
+                    New-Item -ItemType Directory -Name "HTTP" -Path .\ -ErrorAction Stop
+                }
+                if(!(Test-Path -Path .\HTTP\$($server.Name))){
+                    New-Item -ItemType Directory -Name "$($server.Name)" -Path .\HTTP -ErrorAction Stop
+                }
+                foreach($file in $httpSourceFiles){
+                   Copy-Item $file.FullName -Destination .\HTTP\$($server.Name) -ErrorAction Stop
+                } 
             }
-            $httpSourceFiles = Get-ChildItem -Path $iisNetworkLogPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
-            if(!(Test-Path -Path .\HTTP)){
-                New-Item -ItemType Directory -Name "HTTP" -Path .\ -ErrorAction Stop
-            }
-            if(!(Test-Path -Path .\HTTP\$($server.Name))){
-                New-Item -ItemType Directory -Name "$($server.Name)" -Path .\HTTP -ErrorAction Stop
-            }
-            foreach($file in $httpSourceFiles){
-               Copy-Item $file.FullName -Destination .\HTTP\$($server.Name) -ErrorAction Stop
-            } 
+        }catch{
+            Write-Host $_.Exception.GetType() -ForegroundColor Yellow
         }
+        
     }
     "Smtp" {
         foreach($server in $exchangeServers) {
