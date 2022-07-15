@@ -33,19 +33,27 @@ switch ($Log) {
         }
     }
     "POP" {
-        $popServersSettings = $exchangeServer | %{Get-PopSettings -Server $_.Name}
+        $popServersSettings = $exchangeServers | %{Get-PopSettings -Server $_.Name}
         foreach($popServerSettings in $popServersSettings) {
             $popLogNetworkPath = "\\$($popServerSettings.Server)\" + $popServerSettings.LogFileLocation.Replace(":","$")
             try{
-                Set-PopSettings -Server $popServerSettings.Server -ProtocolLogEnabled $true -ErrorAction Stop
+                if((Get-PopSettings -Server $popServerSettings.Server -ErrorAction Stop).ProtocolLogEnabled -eq $false){
+                    Set-PopSettings -Server $popServerSettings.Server -ProtocolLogEnabled $true -ErrorAction Stop
+                    Invoke-Command -ComputerName $popServerSettings.Server -ScriptBlock {Restart-Service MSExchangePop3;Restart-Service MSexchangePop3BE} -ErrorAction Stop
+                }
                 $sourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop
-                New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
-                New-Item -ItemType Directory -Name "$($popServerSettings.Server)" -Path .\POP -ErrorAction Stop
-                Copy-Item $sourceFiles -Destination .\POP\$($popServerSettings.Server)
+                if(!(Test-Path -Path .\POP)){
+                    New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
+                }
+                if(!(Test-Path -Path .\POP\$($popServerSettings.Server))){
+                    New-Item -ItemType Directory -Name "$($popServerSettings.Server)" -Path .\POP -ErrorAction Stop
+                }
+                foreach($file in $sourceFiles){
+                    Copy-Item $file.FullName -Destination .\POP\$($popServerSettings.Server) -ErrorAction Stop
+                }                
             }catch{
                 Write-Host $_.Exception.GetType() -ForegroundColor Yellow
             }
-            
         }
     }
     Default {
