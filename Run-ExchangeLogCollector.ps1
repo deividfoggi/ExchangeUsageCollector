@@ -79,6 +79,22 @@ switch ($Log) {
             } 
         }
     }
+    "Smtp" {
+        foreach($server in $exchangeServers) {
+            $receiveProtocolLogPath = Get-TransportService $server.Name
+            $receiveProtocolLogNetworkPath = "\\$($server.Name)\" + $receiveProtocolLogPath.ReceiveProtocolLogPath.Replace(":","$")
+            $smtpSourceFiles = Get-ChildItem -Path $receiveProtocolLogNetworkPath -ErrorAction Stop | where LastWriteTime -gt (Get-Date).AddDays(-7)
+            if(!(Test-Path -Path .\Smtp)){
+                New-Item -ItemType Directory -Name "SMTP" -Path .\ -ErrorAction Stop
+            }
+            if(!(Test-Path -Path .\SMTP\$($server.Name))){
+                New-Item -ItemType Directory -Name "$($server.Name)" -Path .\SMTP -ErrorAction Stop
+            }
+            foreach($file in $smtpSourceFiles){
+                Copy-Item $file.FullName -Destination .\SMTP\$($server.Name) -ErrorAction Stop
+            } 
+        }
+    }
     Default {
         Write-Host "Use parameter 'Log' to choose which log to collect: Tracking, " -ForegroundColor Yellow
     }
