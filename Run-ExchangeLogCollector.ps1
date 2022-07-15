@@ -1,5 +1,7 @@
 Param(
-    $Log
+    [Parameter(Mandatory=$true)]
+    [ValidateSet("Tracking","Mailbox","Pop","Http","Smtp")]
+    [string[]]$LogType
 )
 if (!(Get-PSSession | where ConfigurationName -eq "Microsoft.Exchange")) {
     try{
@@ -11,7 +13,7 @@ if (!(Get-PSSession | where ConfigurationName -eq "Microsoft.Exchange")) {
 
 $exchangeServers = Get-ExchangeServer | where ServerRole -NotMatch "edge"
 
-switch ($Log) {
+switch ($LogType) {
     "Tracking" {
         $trackingLogs = @()
         $exchangeServers | %{
