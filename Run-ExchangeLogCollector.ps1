@@ -32,6 +32,53 @@ switch ($Log) {
             Write-Host $_.Exception.Message -ForegroundColor Red
         }
     }
+    "POP" {
+        $popServersSettings = $exchangeServers | %{Get-PopSettings -Server $_.Name}
+        foreach($popServerSettings in $popServersSettings) {
+            $popLogNetworkPath = "\\$($popServerSettings.Server)\" + $popServerSettings.LogFileLocation.Replace(":","$")
+            try{
+                if((Get-PopSettings -Server $popServerSettings.Server -ErrorAction Stop).ProtocolLogEnabled -eq $false){
+                    Set-PopSettings -Server $popServerSettings.Server -ProtocolLogEnabled $true -ErrorAction Stop
+                    Invoke-Command -ComputerName $popServerSettings.Server -ScriptBlock {Restart-Service MSExchangePop3;Restart-Service MSexchangePop3BE} -ErrorAction Stop
+                }
+                $popSourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
+                if(!(Test-Path -Path .\POP)){
+                    New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
+                }
+                if(!(Test-Path -Path .\POP\$($popServerSettings.Server))){
+                    New-Item -ItemType Directory -Name "$($popServerSettings.Server)" -Path .\POP -ErrorAction Stop
+                }
+                foreach($file in $popSourceFiles){
+                    Copy-Item $file.FullName -Destination .\POP\$($popServerSettings.Server) -ErrorAction Stop
+                }                
+            }catch{
+                Write-Host $_.Exception.GetType() -ForegroundColor Yellow
+            }
+        }
+    }
+    "Http" {
+        foreach($server in $exchangeServers) {
+            $iisLogPath = Invoke-Command -ComputerName $server.Name -ScriptBlock{
+                Import-Module WebAdministration
+                (Get-Item 'IIS:\Sites\Default Web Site').logFile.Directory
+            } -ErrorAction Stop
+            if($iisLogPath.Split("\")[0] -match ":") {
+                $iisNetworkLogPath = "\\$($server.Name)\" + $iisLogPath.Replace(":","$") + "\W3SVC1"
+            } elseif($iisLogPath.Split("\")[0] -match "%SystemDrive%") {
+                $iisNetworkLogPath = "\\$($server.Name)\" + $iisLogPath.Replace("%SystemDrive%","C$") + "\W3SVC1"
+            }
+            $httpSourceFiles = Get-ChildItem -Path $iisNetworkLogPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
+            if(!(Test-Path -Path .\HTTP)){
+                New-Item -ItemType Directory -Name "HTTP" -Path .\ -ErrorAction Stop
+            }
+            if(!(Test-Path -Path .\HTTP\$($server.Name))){
+                New-Item -ItemType Directory -Name "$($server.Name)" -Path .\HTTP -ErrorAction Stop
+            }
+            foreach($file in $httpSourceFiles){
+               Copy-Item $file.FullName -Destination .\HTTP\$($server.Name) -ErrorAction Stop
+            } 
+        }
+    }
     Default {
         Write-Host "Use parameter 'Log' to choose which log to collect: Tracking, " -ForegroundColor Yellow
     }
