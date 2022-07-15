@@ -67,7 +67,7 @@ switch ($Log) {
             } elseif($iisLogPath.Split("\")[0] -match "%SystemDrive%") {
                 $iisNetworkLogPath = "\\$($server.Name)\" + $iisLogPath.Replace("%SystemDrive%","C$") + "\W3SVC1"
             }
-            $httpSourceFiles = Get-ChildItem -Path $iisNetworkLogPath -ErrorAction Stop
+            $httpSourceFiles = Get-ChildItem -Path $iisNetworkLogPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
             if(!(Test-Path -Path .\HTTP)){
                 New-Item -ItemType Directory -Name "HTTP" -Path .\ -ErrorAction Stop
             }
