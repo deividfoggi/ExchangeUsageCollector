@@ -1,3 +1,4 @@
 *.csv
 *.log
 launch.json
+*.zip
