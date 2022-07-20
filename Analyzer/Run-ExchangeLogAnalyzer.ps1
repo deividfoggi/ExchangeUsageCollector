@@ -46,16 +46,18 @@ switch ($LogType) {
             foreach($folder in $folders){
                 Write-Progress -Activity "Processing folder $($folder.Name)" -Status "Folder $y of $($folders.Length)" -Id 1 -PercentComplete (($y/$folders.Length)*100)
                 $logFiles = Get-ChildItem ".\HTTP\$($folder.Name)" -Recurse -ErrorAction Stop
-                New-Item -ItemType Directory -Path ".\HTTP\Sanitized\$($folder.Name)" -ErrorAction Stop
-                $i = 1
-                foreach($item in $logFiles){
-                    Write-Progress -Activity "Sanitizing file $($item.Name)" -Status "File $i of $($logFiles.Length)" -Id 2 -ParentId 1 -PercentComplete (($i/$logFiles.Length)*100)
-                    if($item.GetType().Name -eq "FileInfo"){
-                        (Get-Content $item -ErrorAction Stop).Replace("#Fields: ", "") | Select-String -Pattern '^#' -NotMatch | %{$_.Line} | Out-File $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace(".log","_sanitized_$($folder.Name).log")
-                        #Get-Content $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace(".log","_sanitizedTEMP.log") | Select-String -Pattern '^#' -NotMatch | Out-File $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace("_sanitizedTEMP.log","_$($folder.Name)_sanitized.log") -ErrorAction Stop
-                        #Remove-Item $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace(".log","_sanitizedTEMP.log") -ErrorAction Stop
+                if($logFiles){
+                    New-Item -ItemType Directory -Path ".\HTTP\Sanitized\$($folder.Name)" -ErrorAction Stop
+                    $i = 1
+                    foreach($item in $logFiles){
+                        Write-Progress -Activity "Sanitizing file $($item.Name)" -Status "File $i of $($logFiles.Length)" -Id 2 -ParentId 1 -PercentComplete (($i/$logFiles.Length)*100)
+                        if($item.GetType().Name -eq "FileInfo"){
+                            (Get-Content $item -ErrorAction Stop).Replace("#Fields: ", "") | Select-String -Pattern '^#' -NotMatch | %{$_.Line} | Out-File $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace(".log","_sanitized_$($folder.Name).log")
+                            #Get-Content $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace(".log","_sanitizedTEMP.log") | Select-String -Pattern '^#' -NotMatch | Out-File $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace("_sanitizedTEMP.log","_$($folder.Name)_sanitized.log") -ErrorAction Stop
+                            #Remove-Item $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace(".log","_sanitizedTEMP.log") -ErrorAction Stop
+                        }
+                        $i++
                     }
-                    $i++
                 }
                 $y++
             }
