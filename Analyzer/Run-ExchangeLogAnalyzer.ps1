@@ -52,7 +52,7 @@ switch ($LogType) {
                     foreach($item in $logFiles){
                         Write-Progress -Activity "Sanitizing file $($item.Name)" -Status "File $i of $($logFiles.Length)" -Id 2 -ParentId 1 -PercentComplete (($i/$logFiles.Length)*100)
                         if($item.GetType().Name -eq "FileInfo"){
-                            (Get-Content $item.FullName -ErrorAction Stop).Replace("#Fields: ", "") | Select-String -Pattern '^#' -NotMatch | %{$_.Line} | Out-File $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace(".log","_sanitized_$($folder.Name).log")
+                            (Get-Content $item.FullName -ErrorAction Stop | select -Skip 3).Replace("#Fields: ", "") | Out-File $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace(".log","_sanitized_$($folder.Name).log")
                         }
                         $i++
                     }
