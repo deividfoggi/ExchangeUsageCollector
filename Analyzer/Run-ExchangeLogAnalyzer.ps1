@@ -150,14 +150,16 @@ switch ($LogType) {
                 $logFiles = Get-ChildItem ".\HTTP\$($folder.Name)" -Recurse -ErrorAction Stop
                 if($logFiles){
                     New-Item -ItemType Directory -Path ".\HTTP\Sanitized\$($folder.Name)" -ErrorAction Stop
-                    $i = 1
-                    foreach($item in $logFiles){
-                        Write-Progress -Activity "Sanitizing file $($item.Name)" -Status "File $i of $($logFiles.Length)" -Id 2 -ParentId 1 -PercentComplete (($i/$logFiles.Length)*100)
-                        if($item.GetType().Name -eq "FileInfo"){
-                            (Get-Content $item.FullName -ErrorAction Stop | select -Skip 3).Replace("#Fields: ", "") | Out-File $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace(".log","_sanitized_$($folder.Name).log")
-                        }
-                        $i++
-                    }
+
+                    New-PowerShellRunspace -Files $logFiles -Protocol HTTP -Folder $folder.Name
+                    #$i = 1
+                    #foreach($item in $logFiles){
+                    #    Write-Progress -Activity "Sanitizing file $($item.Name)" -Status "File $i of $($logFiles.Length)" -Id 2 -ParentId 1 -PercentComplete (($i/$logFiles.Length)*100)
+                    #    if($item.GetType().Name -eq "FileInfo"){
+                    #        (Get-Content $item.FullName -ErrorAction Stop | select -Skip 3).Replace("#Fields: ", "") | Out-File $item.FullName.Replace("\HTTP\","\HTTP\Sanitized\").Replace(".log","_sanitized_$($folder.Name).log")
+                    #    }
+                    #    $i++
+                    #}
                 }
                 $y++
             }
