@@ -58,10 +58,8 @@ Function New-PowerShellRunspace{
     Param(
         [array]$Files,
         [string]$Protocol,
-        [string]$FolderName
+        [string]$CurrentDir
     )
-
-    Write-Log -Status "Info" -Message "Creating a runspace pool with 10 threads limit"
 
     #Creates a Runspace pool limited to 10 threads
     $RunspacePool = [runspacefactory]::CreateRunspacePool(1,10)
@@ -76,11 +74,11 @@ Function New-PowerShellRunspace{
     $i = 1
 
     #For each chunk of files in files chunks
-    foreach($file in $fileChunks){
+    foreach($files in $fileChunks){
         $ParamList = @{
-            FileName = ".\$($Protocol)\temporary_$i.csv"
-            Files = $Files
-            FolderName = $FolderName
+            Files = $files
+            Protocol = $Protocol
+            CurrentDir = $CurrentDir
         }
         #Create the powershell runspace
         $PowerShell = [powershell]::Create()
@@ -88,12 +86,17 @@ Function New-PowerShellRunspace{
         $PowerShell.RunspacePool = $RunspacePool
         #Define the script block of the current run space using the current files chunk
         $PowerShell.AddScript({
-            param ($FileName,$Files)
-            #Empty array to append all files objects
-            $parsedFileList = @()
+            param ($Files,$Protocol,$CurrentDir)
+            Set-Location -Path $CurrentDir
             #For each user in array users
-            foreach($file in $Files){               
-                (Get-Content $file.FullName -ErrorAction Stop | select -Skip 3).Replace("#Fields: ", "") | Out-File $item.FullName.Replace("\$($Protocol)\","\$($Protocol)\Sanitized\").Replace(".log","_sanitized_$($FolderName).log")
+            foreach($file in $Files){
+                if($file.GetType().Name -eq "FileInfo"){
+                    "$(Get-Date) - Current Dir: $($CurrentDir) Dir name: $($file.Directory.Name) - Complete dir: .\$($Protocol)\Sanitized\$($file.Directory.Name)" | Out-File c:\temp\log.txt -Append
+                    if(!(Test-Path ".\$($Protocol)\Sanitized\$($file.Directory.Name)")) {
+                        New-Item -ItemType Directory -Path ".\$($Protocol)\Sanitized\$($file.Directory.Name)"
+                    }
+                }
+                (Get-Content $file.FullName -ErrorAction Stop | select -Skip 3).Replace("#Fields: ", "") | Out-File $file.FullName.Replace("\$($Protocol)\","\$($Protocol)\Sanitized\").Replace(".log","_sanitized_$($file.Directory.Name).log")
             }
         })
         $PowerShell.AddParameters($ParamList)
@@ -102,8 +105,8 @@ Function New-PowerShellRunspace{
         #Increment the control variable
         $i++
     }
-    #While at least on job is not completed, wait for 5 seconds and check again. Script will not move further until all jobs are completed.
-    While($Jobs.IsCompleted -contains $false){Start-Sleep -Seconds 5}
+    #While at least on job is not completed, wait for 2 seconds and check again. Script will not move further until all jobs are completed.
+    While($Jobs.IsCompleted -contains $false){Start-Sleep -Seconds 2}
 }
 
 switch ($LogType) {
@@ -143,15 +146,18 @@ switch ($LogType) {
             if(!(Test-Path .\HTTP\Sanitized)){
                 New-Item -ItemType Directory -Path .\HTTP\Sanitized -ErrorAction Stop
             }
-            $folders = Get-ChildItem .\HTTP -ErrorAction Stop | where FullName -NotMatch "sanitized"
+            $logFiles = Get-ChildItem .\HTTP -Recurse -File -ErrorAction Stop | where FullName -NotMatch "sanitized"
             $y = 1
-            foreach($folder in $folders){
-                Write-Progress -Activity "Processing folder $($folder.Name)" -Status "Folder $y of $($folders.Length)" -Id 1 -PercentComplete (($y/$folders.Length)*100)
-                $logFiles = Get-ChildItem ".\HTTP\$($folder.Name)" -Recurse -ErrorAction Stop
-                if($logFiles){
-                    New-Item -ItemType Directory -Path ".\HTTP\Sanitized\$($folder.Name)" -ErrorAction Stop
 
-                    New-PowerShellRunspace -Files $logFiles -Protocol HTTP -Folder $folder.Name
+            New-PowerShellRunspace -Files $logFiles -Protocol "HTTP" -CurrentDir (Get-Location).Path.ToString()
+
+            #foreach($folder in $folders){
+            #    Write-Progress -Activity "Processing folder $($folder.Name)" -Status "Folder $y of $($folders.Length)" -Id 1 -PercentComplete (($y/$folders.Length)*100)
+            #    $logFiles = Get-ChildItem ".\HTTP\$($folder.Name)" -Recurse -ErrorAction Stop
+            #    if($logFiles){
+            #        New-Item -ItemType Directory -Path ".\HTTP\Sanitized\$($folder.Name)" -ErrorAction Stop
+
+            #        New-PowerShellRunspace -Files $logFiles -Protocol HTTP -Folder $folder.Name
                     #$i = 1
                     #foreach($item in $logFiles){
                     #    Write-Progress -Activity "Sanitizing file $($item.Name)" -Status "File $i of $($logFiles.Length)" -Id 2 -ParentId 1 -PercentComplete (($i/$logFiles.Length)*100)
@@ -160,9 +166,9 @@ switch ($LogType) {
                     #    }
                     #    $i++
                     #}
-                }
-                $y++
-            }
+                #}
+            #    $y++
+            #}
         }
         catch{
             Write-Host $_.Exception.Message -ForegroundColor Yellow
