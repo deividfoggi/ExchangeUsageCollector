@@ -61,8 +61,10 @@ Function New-PowerShellRunspace{
         [string]$CurrentDir
     )
 
+    #Max threads
+    $maxThreads = 20
     #Creates a Runspace pool limited to 10 threads
-    $RunspacePool = [runspacefactory]::CreateRunspacePool(1,10)
+    $RunspacePool = [runspacefactory]::CreateRunspacePool(1, $maxThreads)
     $RunspacePool.Open()
     #Define an array to store all runspaces
     $Jobs = @()
@@ -91,7 +93,6 @@ Function New-PowerShellRunspace{
             #For each user in array users
             foreach($file in $Files){
                 if($file.GetType().Name -eq "FileInfo"){
-                    "$(Get-Date) - Current Dir: $($CurrentDir) Dir name: $($file.Directory.Name) - Complete dir: .\$($Protocol)\Sanitized\$($file.Directory.Name)" | Out-File c:\temp\log.txt -Append
                     if(!(Test-Path ".\$($Protocol)\Sanitized\$($file.Directory.Name)")) {
                         New-Item -ItemType Directory -Path ".\$($Protocol)\Sanitized\$($file.Directory.Name)"
                     }
@@ -106,7 +107,7 @@ Function New-PowerShellRunspace{
         $i++
     }
     #While at least on job is not completed, wait for 2 seconds and check again. Script will not move further until all jobs are completed.
-    While($Jobs.IsCompleted -contains $false){Start-Sleep -Seconds 2}
+    While($Jobs.IsCompleted -contains $false){$Jobs | ft;Start-Sleep -Seconds 2;cls}
 }
 
 switch ($LogType) {
