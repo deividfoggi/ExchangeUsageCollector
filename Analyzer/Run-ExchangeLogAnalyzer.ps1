@@ -107,7 +107,12 @@ Function New-PowerShellRunspace{
         $i++
     }
     #While at least on job is not completed, wait for 2 seconds and check again. Script will not move further until all jobs are completed.
-    While($Jobs.IsCompleted -contains $false){$Jobs | ft;Start-Sleep -Seconds 2;cls}
+    While($Jobs.IsCompleted -contains $false){
+        $sanitizedFiles = Get-ChildItem ./HTTP/Sanitized -Recurse -File | Measure-Object
+        Write-Host "Progress: $((($sanitizedFiles.count/$Files.Count)*100).ToString("##.##"))%. Already processed $($sanitizedFiles.Count) files. Pending to process $($Files.Count - $sanitizedFiles.count) files. Last update $(Get-Date)."
+        Start-Sleep -Seconds 2
+        Clear-Host
+    }
 }
 
 switch ($LogType) {
