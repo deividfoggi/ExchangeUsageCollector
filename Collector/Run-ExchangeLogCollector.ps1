@@ -41,19 +41,19 @@ switch ($LogType) {
                 $popLogNetworkPath = "\\$($popServerSettings.Server)\" + $popServerSettings.LogFileLocation.Replace(":","$")
                 try{
                     if((Get-PopSettings -Server $popServerSettings.Server -ErrorAction Stop).ProtocolLogEnabled -eq $false){
-                        Set-PopSettings -Server $popServerSettings.Server -ProtocolLogEnabled $true -ErrorAction Stop
-                        Invoke-Command -ComputerName $popServerSettings.Server -ScriptBlock {Restart-Service MSExchangePop3;Restart-Service MSexchangePop3BE} -ErrorAction Stop
+                        Write-Host "Pop protocol logging is not enabled for server $($popServerSettings.Server). Please, enable it using Set-PopSettings, restart Pop service and wait until there are logs in the log directory." -ForegroundColor Yellow
+                    } else {
+                        $popSourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
+                        if(!(Test-Path -Path .\POP)){
+                            New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
+                        }
+                        if(!(Test-Path -Path .\POP\$($popServerSettings.Server))){
+                            New-Item -ItemType Directory -Name "$($popServerSettings.Server)" -Path .\POP -ErrorAction Stop
+                        }
+                        foreach($file in $popSourceFiles){
+                            Copy-Item $file.FullName -Destination .\POP\$($popServerSettings.Server) -ErrorAction Stop
+                        }       
                     }
-                    $popSourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
-                    if(!(Test-Path -Path .\POP)){
-                        New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
-                    }
-                    if(!(Test-Path -Path .\POP\$($popServerSettings.Server))){
-                        New-Item -ItemType Directory -Name "$($popServerSettings.Server)" -Path .\POP -ErrorAction Stop
-                    }
-                    foreach($file in $popSourceFiles){
-                        Copy-Item $file.FullName -Destination .\POP\$($popServerSettings.Server) -ErrorAction Stop
-                    }                
                 }catch{
                     Write-Host $_.Exception.GetType() -ForegroundColor Yellow
                 }
