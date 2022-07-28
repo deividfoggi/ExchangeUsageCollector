@@ -124,7 +124,7 @@ switch ($LogType) {
         if(!(Test-Path .\POP\Sanitized)){
             New-Item -ItemType Directory -Path .\POP\Sanitized
         }
-        $folders = Get-ChildItem .\HTTP -ErrorAction Stop | where FullName -NotMatch "sanitized"
+        $folders = Get-ChildItem .\Pop -ErrorAction Stop | where FullName -NotMatch "sanitized"
         $y = 1
         foreach($folder in $folders){
             Write-Progress -Activity "Processing folder $($folder.Name)" -Status "Folder $y of $($folders.Length)" -Id 1 -PercentComplete (($y/$folders.Length)*100)
