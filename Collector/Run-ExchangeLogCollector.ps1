@@ -94,6 +94,7 @@ switch ($LogType) {
     "Smtp" {
         try{
             foreach($server in $exchangeServers) {
+                #Get transport service settings from the current server
                 $receiveProtocolLogPath = Get-TransportService $server.Name
                 $receiveProtocolLogNetworkPath = "\\$($server.Name)\" + $receiveProtocolLogPath.ReceiveProtocolLogPath.Replace(":","$")
                 $smtpSourceFiles = Get-ChildItem -Path $receiveProtocolLogNetworkPath -ErrorAction Stop | where LastWriteTime -gt (Get-Date).AddDays(-7)
