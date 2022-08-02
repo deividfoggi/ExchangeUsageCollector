@@ -1,17 +1,17 @@
 Param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("Tracking","Mailbox","Pop","Http","Smtp")]
+    [ValidateSet("Tracking","Mailbox","Pop","Http","Smtp","Smtp_FE")]
     [string[]]$LogType
 )
 if (!(Get-PSSession | where ConfigurationName -eq "Microsoft.Exchange")) {
     try{
-        Import-PSSession (New-PSSession -ConnectionUri http://fogex01/Powershell -ConfigurationName Microsoft.Exchange -Authentication kerberos) -ErrorAction Stop
+        Import-PSSession (New-PSSession -ConnectionUri http://vmserver275.rootbrasil.intranet/PowerShell/ -ConfigurationName Microsoft.Exchange -Authentication kerberos) -ErrorAction Stop
     }catch{
         Write-Host $_.Exception.Message
     }
 }
 
-$exchangeServers = Get-ExchangeServer | where ServerRole -NotMatch "edge"
+$exchangeServers = Get-ExchangeServer | Where-Object {$_.ServerRole -NotMatch "edge" -AND $_.Name -notmatch "WSPCXS"}
 
 switch ($LogType) {
     "Tracking" {
@@ -109,6 +109,27 @@ switch ($LogType) {
                 } 
             }
         }catch{
+            Write-Host $_.Exception.GetType() -ForegroundColor Yellow
+        }
+    }
+    "Smtp_FE" {
+        try{
+            foreach($server in $exchangeServers) {
+                #Get transport service settings from the current server
+                $receiveProtocolFELogPath = Get-FrontendTransportService $server.Name
+                $receiveProtocolFELogNetworkPath = "\\$($server.Name)\" + $receiveProtocolFELogPath.ReceiveProtocolLogPath.Replace(":","$")
+                $smtpFESourceFiles = Get-ChildItem -Path $receiveProtocolFELogNetworkPath -ErrorAction Stop | where LastWriteTime -gt (Get-Date).AddDays(-7)
+                if(!(Test-Path -Path .\Smtp_FE)){
+                    New-Item -ItemType Directory -Name "SMTP_FE" -Path .\ -ErrorAction Stop
+                }
+                if(!(Test-Path -Path .\SMTP_FE\$($server.Name))){
+                    New-Item -ItemType Directory -Name "$($server.Name)" -Path .\SMTP_FE -ErrorAction Stop
+                }
+                foreach($file in $smtpFESourceFiles){
+                    Copy-Item $file.FullName -Destination .\SMTP_FE\$($server.Name) -Credential $cred -ErrorAction Stop
+                } 
+            }
+        } catch{
             Write-Host $_.Exception.GetType() -ForegroundColor Yellow
         }
     }

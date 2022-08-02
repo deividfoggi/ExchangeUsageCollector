@@ -127,13 +127,13 @@ switch ($LogType) {
         $folders = Get-ChildItem .\Pop -ErrorAction Stop | where FullName -NotMatch "sanitized"
         $y = 1
         foreach($folder in $folders){
-            Write-Progress -Activity "Processing folder $($folder.Name)" -Status "Folder $y of $($folders.Length)" -Id 1 -PercentComplete (($y/$folders.Length)*100)
+            Write-Progress -Activity "Processing folder $($folder.Name)" -Status "Folder $y of $(($folders | Measure-Object).count)" -Id 1 -PercentComplete (($y/($folders | Measure-Object).count)*100)
             $logFiles = Get-ChildItem ".\POP\$($folder.Name)" -Recurse -ErrorAction Stop
             if($logFiles){
                 New-Item -ItemType Directory -Path ".\POP\Sanitized\$($folder.Name)" -ErrorAction Stop
                 $i = 1
                 foreach($item in $logFiles){
-                    Write-Progress -Activity "Sanitizing file $($item.Name)" -Status "File $i of $($logFiles.Length)" -Id 2 -ParentId 1 -PercentComplete (($i/$logFiles.Length)*100)
+                    Write-Progress -Activity "Sanitizing file $($item.Name)" -Status "File $i of $(($logFiles | Measure-Object).count)" -Id 2 -ParentId 1 -PercentComplete (($i/($logFiles | Measure-Object).count)*100)
                     if($item.GetType().Name -eq "FileInfo"){
                         Get-Content $item -ErrorAction Stop | Select-String -Pattern '^#' -NotMatch -ErrorAction Stop | %{$_.Line} | Out-File $item.FullName.Replace("\POP\","\POP\Sanitized\").Replace(".LOG","_sanitized_$($folder.Name).LOG")
                     }
