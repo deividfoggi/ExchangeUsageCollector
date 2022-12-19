@@ -1,11 +1,13 @@
 Param(
     [Parameter(Mandatory=$true)]
     [ValidateSet("Tracking","Mailbox","Pop","Http","Smtp","Smtp_FE")]
-    [string[]]$LogType
+    [string[]]$LogType,
+    [Parameter(Mandatory=$true)]
+    $ExchangeServer
 )
 if (!(Get-PSSession | where ConfigurationName -eq "Microsoft.Exchange")) {
     try{
-        Import-PSSession (New-PSSession -ConnectionUri http://vmserver275.rootbrasil.intranet/PowerShell/ -ConfigurationName Microsoft.Exchange -Authentication kerberos) -ErrorAction Stop
+        Import-PSSession (New-PSSession -ConnectionUri http://$($ExchangeServer))/PowerShell/ -ConfigurationName Microsoft.Exchange -Authentication kerberos) -ErrorAction Stop
     }catch{
         Write-Host $_.Exception.Message
     }
