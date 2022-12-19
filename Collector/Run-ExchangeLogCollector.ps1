@@ -20,7 +20,7 @@ switch ($LogType) {
         $trackingLogs = @()
         $exchangeServers | ForEach-Object{
             try{
-                $trackingLogs += Get-MessageTrackingLog -Server $_.Name -EventId Receive -Start (Get-Date).AddDays(-5) -End (Get-Date) -ResultSize Unlimited -ErrorAction Stop | ?{$_.Sender -NotMatch "HealthMailbox" -And $_.Sender -NotMatch "InboundProxy" -And $_.SourceContext -NotMatch "System Probe"}
+                $trackingLogs += Get-MessageTrackingLog -Server $_.Name -EventId Receive -Start (Get-Date).AddDays(-5) -End (Get-Date) -ResultSize Unlimited -ErrorAction Stop | Where-Object{$_.Sender -NotMatch "HealthMailbox" -And $_.Sender -NotMatch "InboundProxy" -And $_.SourceContext -NotMatch "System Probe"}
             }catch{
                 Write-Host $_.Exception.Message -ForegroundColor Red
             }
@@ -77,7 +77,7 @@ switch ($LogType) {
                 } elseif($iisLogPath.Split("\")[0] -match "%SystemDrive%") {
                     $iisNetworkLogPath = "\\$($server.Name)\" + $iisLogPath.Replace("%SystemDrive%","C$") + "\W3SVC1"
                 }
-                $httpSourceFiles = Get-ChildItem -Path $iisNetworkLogPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
+                $httpSourceFiles = Get-ChildItem -Path $iisNetworkLogPath -ErrorAction Stop | Where-Object{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
                 if(!(Test-Path -Path .\HTTP)){
                     New-Item -ItemType Directory -Name "HTTP" -Path .\ -ErrorAction Stop
                 }
