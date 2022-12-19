@@ -5,9 +5,9 @@ Param(
     [Parameter(Mandatory=$true)]
     $ExchangeServer
 )
-if (!(Get-PSSession | where ConfigurationName -eq "Microsoft.Exchange")) {
+if (!(Get-PSSession | Where-Object ConfigurationName -eq "Microsoft.Exchange")) {
     try{
-        Import-PSSession (New-PSSession -ConnectionUri http://$($ExchangeServer))/PowerShell/ -ConfigurationName Microsoft.Exchange -Authentication kerberos) -ErrorAction Stop
+        Import-PSSession (New-PSSession -ConnectionUri http://$($ExchangeServer)/PowerShell/ -ConfigurationName Microsoft.Exchange -Authentication kerberos) -ErrorAction Stop
     }catch{
         Write-Host $_.Exception.Message
     }
@@ -18,7 +18,7 @@ $exchangeServers = Get-ExchangeServer | Where-Object {$_.ServerRole -NotMatch "e
 switch ($LogType) {
     "Tracking" {
         $trackingLogs = @()
-        $exchangeServers | %{
+        $exchangeServers | ForEach-Object{
             try{
                 $trackingLogs += Get-MessageTrackingLog -Server $_.Name -EventId Receive -Start (Get-Date).AddDays(-5) -End (Get-Date) -ResultSize Unlimited -ErrorAction Stop | ?{$_.Sender -NotMatch "HealthMailbox" -And $_.Sender -NotMatch "InboundProxy" -And $_.SourceContext -NotMatch "System Probe"}
             }catch{
@@ -30,7 +30,7 @@ switch ($LogType) {
     }
     "Mailbox" {
         try{
-            $mailboxes = Get-Mailbox -ResultSize Unlimited -ErrorAction Stop | Select Name, Alias, PrimarySmtpAddress
+            $mailboxes = Get-Mailbox -ResultSize Unlimited -ErrorAction Stop | Select-Object Name, Alias, PrimarySmtpAddress
             $mailboxes | Export-Csv .\mailboxes_$(Get-Date -Format 'dd-MM-yyyy_hh-mm-ss').csv -NoTypeInformation
         }catch{
             Write-Host $_.Exception.Message -ForegroundColor Red
@@ -38,14 +38,14 @@ switch ($LogType) {
     }
     "POP" {
         try{
-            $popServersSettings = $exchangeServers | %{Get-PopSettings -Server $_.Name}
+            $popServersSettings = $exchangeServers | ForEach-Object{Get-PopSettings -Server $_.Name}
             foreach($popServerSettings in $popServersSettings) {
                 $popLogNetworkPath = "\\$($popServerSettings.Server)\" + $popServerSettings.LogFileLocation.Replace(":","$")
                 try{
                     if((Get-PopSettings -Server $popServerSettings.Server -ErrorAction Stop).ProtocolLogEnabled -eq $false){
                         Write-Host "Pop protocol logging is not enabled for server $($popServerSettings.Server). Please, enable it using Set-PopSettings, restart Pop service and wait until there are logs in the log directory." -ForegroundColor Yellow
                     } else {
-                        $popSourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop | ?{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
+                        $popSourceFiles = Get-ChildItem -Path $popLogNetworkPath -ErrorAction Stop | Where-Object{$_.LastWriteTime -gt (Get-Date).AddDays(-7)}
                         if(!(Test-Path -Path .\POP)){
                             New-Item -ItemType Directory -Name "POP" -Path .\ -ErrorAction Stop
                         }
@@ -99,7 +99,7 @@ switch ($LogType) {
                 #Get transport service settings from the current server
                 $receiveProtocolLogPath = Get-TransportService $server.Name
                 $receiveProtocolLogNetworkPath = "\\$($server.Name)\" + $receiveProtocolLogPath.ReceiveProtocolLogPath.Replace(":","$")
-                $smtpSourceFiles = Get-ChildItem -Path $receiveProtocolLogNetworkPath -ErrorAction Stop | where LastWriteTime -gt (Get-Date).AddDays(-7)
+                $smtpSourceFiles = Get-ChildItem -Path $receiveProtocolLogNetworkPath -ErrorAction Stop | Where-Object LastWriteTime -gt (Get-Date).AddDays(-7)
                 if(!(Test-Path -Path .\Smtp)){
                     New-Item -ItemType Directory -Name "SMTP" -Path .\ -ErrorAction Stop
                 }
@@ -120,7 +120,7 @@ switch ($LogType) {
                 #Get transport service settings from the current server
                 $receiveProtocolFELogPath = Get-FrontendTransportService $server.Name
                 $receiveProtocolFELogNetworkPath = "\\$($server.Name)\" + $receiveProtocolFELogPath.ReceiveProtocolLogPath.Replace(":","$")
-                $smtpFESourceFiles = Get-ChildItem -Path $receiveProtocolFELogNetworkPath -ErrorAction Stop | where LastWriteTime -gt (Get-Date).AddDays(-7)
+                $smtpFESourceFiles = Get-ChildItem -Path $receiveProtocolFELogNetworkPath -ErrorAction Stop | Where-Object LastWriteTime -gt (Get-Date).AddDays(-7)
                 if(!(Test-Path -Path .\Smtp_FE)){
                     New-Item -ItemType Directory -Name "SMTP_FE" -Path .\ -ErrorAction Stop
                 }
