@@ -149,7 +149,7 @@ function Run-ExchangeLogCleaner {
                     foreach($item in $logFiles){
                         Write-Progress -Activity "Sanitizing file $($item.Name)" -Status "File $i of $(($logFiles | Measure-Object).count)" -Id 2 -ParentId 1 -PercentComplete (($i/($logFiles | Measure-Object).count)*100)
                         if($item.GetType().Name -eq "FileInfo"){
-                            Get-Content $item -ErrorAction Stop | Select-String -Pattern '^#' -NotMatch -ErrorAction Stop | %{$_.Line} | Out-File $item.FullName.Replace("\POP\","\POP\Sanitized\").Replace(".LOG","_sanitized_$($folder.Name).LOG")
+                            Get-Content $item -ErrorAction Stop | Select-String -Pattern '^#' -NotMatch -ErrorAction Stop | Where-Object{$_.Line} | Out-File $item.FullName.Replace("\POP\","\POP\Sanitized\").Replace(".LOG","_sanitized_$($folder.Name).LOG")
                         }
                         $i++
                     }
