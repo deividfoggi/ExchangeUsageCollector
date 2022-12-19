@@ -17,6 +17,10 @@ Same as POP, but now it will create a folder "HTTP" and proceed as it does with 
 
 Same as POP and HTTP, but using command (Get-TransportService SERVER).ReceiveProtocolLogPath to determine where the Receive Connector's verbose protocol logging are.
 
+### Smtp_FE
+
+Sam as POP, HTTP and SMTP, but using command Get-FrontendTransportService to determine where the Frontend Receive Connector's verbose protocol logging are.
+
 ### Tracking
 
 It uses Get-MessageTrackingLog to consolidate all tracking logs into one .csv file named as .\trackingLogs_$(Get-Date -Format 'dd-MM-yyyy_hh-mm-ss').csv"
